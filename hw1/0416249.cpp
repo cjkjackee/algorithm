@@ -35,6 +35,14 @@ int main ()
 
         // get method
         fin >> func;
+        fin.get(c);
+        if (c!=10)
+        {
+        	while(fin.get(c))
+        		if (c==10)
+        			break;
+		}
+		
         switch(func)
         {
             case 1:
@@ -45,9 +53,13 @@ int main ()
                 if (c<'0' || c>'9')
                 {
                     while(fin.get(c))
+                    {
                         if (c==10)
                             break;
+                	}
                 }
+                else 
+                	fin.putback(c);
 
                 while((fin.get(c)))
                 {
@@ -112,10 +124,12 @@ int main ()
                 if (c<'0' || c>'9')
                 {
                     while(fin.get(c))
-                        if (c==10)
+                        if (c==10 || c==13)
                             break;
                 }
-
+                else
+                	fin.putback(c);
+                
                 while(1) 
                 {
                     fin.get(c);
