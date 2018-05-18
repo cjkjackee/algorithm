@@ -38,7 +38,7 @@ public:
     ~RBtree();
     void insert(int);
     void del(int);
-    void show(node*);
+    void show(node*,fstream&);
     node* Root();
 private:
     node* root;
@@ -208,7 +208,6 @@ void RBtree::fix_tree_insert(node* now)
     return;
 }
 
-// TODO:
 void RBtree::fix_tree_del(node* now)
 {
     node* sibling;
@@ -398,7 +397,6 @@ void RBtree::insert(int n)
     return;
 }
 
-//TODO:
 void RBtree::del(int n)
 {
     node* now = this->root;
@@ -418,24 +416,24 @@ void RBtree::del(int n)
     return;
 }
 
-void RBtree::show(node* now)
+void RBtree::show(node* now, fstream& fout)
 {
     if (now == NULL)
         return;
 
-    show(now->left);
-    cout << "key: " << now->value;
-    cout << " parent: ";
+    show(now->left,fout);
+    fout << "key: " << now->value;
+    fout << " parent: ";
     if (now->parent == NULL)
-        cout << "0";
+        fout << "0";
     else
-        cout << now->parent->value;
-    cout << " color: ";
+        fout << now->parent->value;
+    fout << " color: ";
     if (now->is_red)
-        cout << "red" << endl;
+        fout << "red" << endl;
     else
-        cout << "black" << endl;
-    show(now->right);
+        fout << "black" << endl;
+    show(now->right,fout);
 
     return;
 }
@@ -457,6 +455,7 @@ int main ()
     stringstream ss;
 
     fin.open("input.txt",fstream::in);
+    fout.open("log.txt",fstream::out);
 
     getline(fin,str);
     ss << str;
@@ -483,11 +482,11 @@ int main ()
             {
                 if (first)
                 {
-                    cout << "Insert: " << n;
+                    fout << "Insert: " << n;
                     first = false;
                 }
                 else 
-                    cout << ", " << n;
+                    fout << ", " << n;
 
                 tree.insert(n);
             }
@@ -495,19 +494,19 @@ int main ()
             {
                 if (first)
                 {
-                    cout << "Delete: " << n;
+                    fout << "Delete: " << n;
                     first = false;
                 }
                 else
-                    cout << ", " << n;
+                    fout << ", " << n;
                 tree.del(n);
             }
             else 
-                cout << "unknow method" << endl;
+                fout << "unknow method" << endl;
         }
-        cout << endl;
+        fout << endl;
 
-        tree.show(tree.Root());
+        tree.show(tree.Root(),fout);
     }
 
     return 0;
