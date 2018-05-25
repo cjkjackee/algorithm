@@ -106,10 +106,6 @@ void RBtree::insert(int n)
     if (now->parent->is_red)
         fix_tree_insert(now);
 
-    cout << endl;
-    debug(root);
-    cout << endl;
-
     return;
 }
 
@@ -442,7 +438,7 @@ int main ()
     stringstream ss;
 
     fin.open("input.txt",fstream::in);
-    fout.open("output.txt",fstream::out);
+    fout.open("log.txt",fstream::out);
 
     getline(fin,str);
     ss << str;
