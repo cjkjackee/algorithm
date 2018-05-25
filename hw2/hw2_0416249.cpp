@@ -1,60 +1,164 @@
-#include<iostream>
-#include<fstream>
-#include<sstream>
-#include<string>
+#include <iostream>
+#include <fstream>
+#include <sstream>
+#include <string>
 using namespace std;
 
-// datatype: node
 class node
 {
     friend class RBtree;
-public:
-    node(){};
-    ~node(){};
-    node(int,node*);
-private:
-    int value;
-    node* left;
-    node* right;
-    node* parent;
-    bool is_red;
+    public:
+        node(){valid=false;};
+        ~node(){};
+        node(node*);
+    private:
+        int value;
+        node* left;
+        node* right;
+        node* parent;
+        bool is_red;
+        bool valid;
 };
 
-node::node(int num, node* p)
+node::node(node* p)
 {
-    value = num;
+    value = 0;
     left = NULL;
     right = NULL;
     parent = p;
-    is_red = true;
+    is_red = false;
+    valid = false;
 }
-// end node
 
-// datatype red black tree
 class RBtree
 {
-public:
-    RBtree(){root = NULL;};
-    ~RBtree();
-    void insert(int);
-    void del(int);
-    void show(node*,fstream&);
-    node* Root();
-private:
-    node* root;
-    void D_all(node*&);
-    void left_rotate(node*);
-    void right_rotate(node*);
-    void fix_tree_insert(node*);
-    void fix_tree_del(node*);
-    void deletion(node*);
+    public:
+        RBtree(){root=new node(NULL);};
+        ~RBtree();
+        void insert(int);
+        void del(int);
+        void show(node*, fstream&);
+        node* Root(){return root;};
+        void debug(node*);
+    private:
+        node* root;
+        void D_all(node*&);
+        void left_rotate(node*);
+        void right_rotate(node*);
+        void fix_tree_insert(node*);
+        void fix_tree_del(node*);
+        void deletion(node*);
 };
+
+void RBtree::debug(node* now)
+{
+    if (!now->valid)
+        return;
+    
+    debug(now->left);
+    cout << "key: " << now->value;
+    cout << " parent: ";
+    if (now->parent == NULL)
+        cout << "0";
+    else
+        cout << now->parent->value;
+    cout << " color: ";
+    if (now->is_red)
+        cout << "red" << endl;
+    else
+        cout << "black" << endl;
+    debug(now->right);
+
+    return;
+}
+
+RBtree::~RBtree()
+{
+    node* now = root;
+    if (now != NULL)
+        D_all(now);
+}
+
+void RBtree::insert(int n)
+{
+    node* now = root;
+
+    while(now->valid)
+    {
+        if (n <= now->value)
+            now = now->left;
+        else
+            now = now->right;
+    }
+
+    now->value = n;
+    now->left = new node(now);
+    now->right = new node(now);
+    now->valid = true;
+    now->is_red = true;
+
+    if (now == root)
+    {
+        now->parent = new node(NULL);
+        now->is_red = false;
+    }
+
+    if (now->parent->is_red)
+        fix_tree_insert(now);
+
+    cout << endl;
+    debug(root);
+    cout << endl;
+
+    return;
+}
+
+void RBtree::del(int n)
+{
+    node* now = root;
+
+    while(1)
+    {
+        if (n == now->value)
+            break;
+        else if (n < now->value)
+            now = now->left;
+        else if (n > now->value)
+            now = now->right;
+    }
+
+    deletion(now);
+
+    return;
+}
+
+void RBtree::show(node* now, fstream& fout)
+{
+    if (!now->valid)
+        return;
+
+    show(now->left,fout);
+    fout << "key: " << now->value;
+    fout << " parent: ";
+    if (!now->parent->valid)
+        fout << "0";
+    else
+        fout << now->parent->value;
+    fout << " color: ";
+    if (now->is_red)
+        fout << "red" << endl;
+    else
+        fout << "black" << endl;
+    show(now->right,fout);
+
+    return;
+}
 
 void RBtree::D_all(node*& now)
 {
     if (now!=NULL)
     {
-        D_all(now->right);
+        D_all(now->left);
         D_all(now->right);
         delete now;
         now = NULL;
@@ -81,13 +185,12 @@ void RBtree::left_rotate(node* now)
     }
     else
     {
-        now->parent = NULL;
+        now->parent = root->parent;
         this->root = now;
     }
 
     parent->right = now->left;
-    if (now->left!=NULL)
-        now->left->parent = parent;
+    now->left->parent = parent;
     now->left = parent;
     parent->parent = now;
 
@@ -113,13 +216,12 @@ void RBtree::right_rotate(node* now)
     }
     else
     {
-        now->parent = NULL;
+        now->parent = root->parent;
         this->root = now;
     }
 
     parent->left = now->right;
-    if (now->right!=NULL)
-        now->right->parent = parent;
+    now->right->parent = parent;
     now->right = parent;
     parent->parent = now;
 
@@ -128,80 +230,63 @@ void RBtree::right_rotate(node* now)
 
 void RBtree::fix_tree_insert(node* now)
 {
-    node* p;
+    node* parent;
     node* uncle;
 
-    // valid when parent==black
-    if (now == this->root)
+    while(1)
     {
-        if (now->is_red)
+        if (now==this->root)
+        {
             now->is_red = false;
-        return;
-    }
+            return;
+        }
 
-    if (now->parent->is_red==false)
-        return;
+        parent = now->parent;
+        if (parent == root)
+            return;
+        
+        if (parent == parent->parent->left)
+            uncle = parent->parent->right;
+        else 
+            uncle = parent->parent->left;
 
-    // init now->parent && parent->sibling
-    p = now->parent;
-    if (p != root)
-    {
-        if (p == p->parent->left)
+        if (uncle->is_red)
         {
-            if (p->parent->right==NULL)
-                uncle = NULL;
+            parent->is_red = false;
+            uncle->is_red = false;
+            parent->parent->is_red = true;
+            now = parent->parent;
+            if (!now->parent->is_red)
+                return;
+        }
+        else 
+        {
+            if (parent == parent->parent->left)
+            {
+                if (now == parent->right)
+                {
+                    left_rotate(now);
+                    parent = now;
+                    now = parent->left;
+                }
+                parent->is_red = false;
+                parent->parent->is_red = true;
+                right_rotate(parent);
+                return;
+            }
             else
-                uncle = p->parent->right;
-        }
-        else 
-        {
-            if (p->parent->left==NULL)
-                uncle = NULL;
-            else 
-                uncle = p->parent->left;
-        }
-    }
-    else 
-        return;
-
-    // case 1: when parent && uncle node == red
-    if (uncle!=NULL && uncle->is_red)
-    {
-        p->is_red = false;
-        uncle->is_red = false;
-        p->parent->is_red = true;
-        fix_tree_insert(p->parent);
-    }
-    // case2 && case3 either parent node on grandparent node left side or right side
-    else
-    {
-        if (p == p->parent->left)
-        {
-            // case 2:
-            if (now == p->right) 
             {
-                left_rotate(now);
-                p = now;
-                now = p->left;
+                if (now == parent->left)
+                {
+                    right_rotate(now);
+                    parent = now;
+                    now = parent->right;
+                }
+                parent->is_red = false;
+                parent->parent->is_red = true;
+                left_rotate(parent);
+                return;
             }
-            // case 3:
-            p->is_red = false;
-            p->parent->is_red = true;
-            right_rotate(p);
-        }
-        else 
-        {
-            //case 2: 
-            if (now == p->left)
-            {
-                right_rotate(now);
-                p = now;
-                now = p->right;
-            }
-            // case 3:
-            p->is_red = false;
-            p->parent->is_red = true;
-            left_rotate(p);
         }
     }
 
@@ -211,238 +296,140 @@ void RBtree::fix_tree_insert(node* now)
 void RBtree::fix_tree_del(node* now)
 {
     node* sibling;
-
+    
     while(1)
     {
-        if (now == this->root)
+        if (now->is_red || now==root)
         {
-            if (now->is_red)
-                now->is_red = false;
+            now->is_red = false;
             return;
         }
 
         if (now == now->parent->left)
-        {
-            if (now->parent->right)
-                sibling = now->parent->right;
-            else 
-                sibling = NULL;
-        }
-        else 
-        {
-            if (now->parent->left)
-                sibling = now->parent->left;
-            else 
-                sibling = NULL;
-        }
-
-        if (sibling!=NULL && sibling->is_red)
+            sibling = now->parent->right;
+        else
+            sibling = now->parent->left;
+        
+        if (sibling->is_red)
         {
             sibling->is_red = false;
             now->parent->is_red = true;
-            if (now == now->parent->left)
+            if (sibling == sibling->parent->right)
                 left_rotate(sibling);
             else
                 right_rotate(sibling);
         }
-        else 
+        else
         {
-            if (sibling==NULL || (sibling->left==NULL && sibling->right==NULL) || (!sibling->left->is_red && !sibling->right->is_red))
+            if ((!sibling->left->is_red || sibling->left==NULL) && (!sibling->right->is_red || sibling->right==NULL))
             {
-                if (sibling)
-                    sibling->is_red = true;
-                if (now->parent->is_red)
-                {
-                    now->parent->is_red = false;
-                    return;
-                }
+                sibling->is_red = true;
                 now = now->parent;
             }
-            else if (sibling->right!=NULL && sibling->right->is_red)
+            else
             {
-                if (now == now->parent->left)
+                if (sibling == now->parent->right)
                 {
+                    if (sibling->left->is_red)
+                    {
+                        sibling->left->is_red = false;
+                        sibling->is_red = true;
+                        right_rotate(sibling->left);
+                        sibling = now->parent->right;
+                    }
                     sibling->is_red = now->parent->is_red;
                     now->parent->is_red = false;
-                    if (sibling->right)
-                        sibling->right->is_red = false;
+                    sibling->right->is_red = false;
                     left_rotate(sibling);
+                    sibling->is_red = false;
                     return;
                 }
-                else 
+                else
                 {
-                    sibling->right->is_red = false;
-                    sibling->is_red = true;
-                    left_rotate(sibling->right);
-                    now = sibling->parent;
-                }
-            }
-            else if (sibling->left!=NULL && sibling->left->is_red)
-            {
-                if (now == now->parent->left)
-                {
-                    sibling->left->is_red = false;
-                    sibling->is_red = true;
-                    right_rotate(sibling->left);
-                    now = sibling->parent;
-                }
-                else 
-                {
+                    if (sibling->right->is_red)
+                    {
+                        sibling->right->is_red = false;
+                        sibling->is_red = true;
+                        left_rotate(sibling->right);
+                        sibling = now->parent->left;
+                    }
                     sibling->is_red = now->parent->is_red;
                     now->parent->is_red = false;
-                    if (sibling->left)
-                        sibling->left->is_red = false;
+                    sibling->left->is_red = false;
                     right_rotate(sibling);
+                    sibling->is_red = false;
                     return;
                 }
             }
         }
     }
-    
+
     return;
 }
 
 void RBtree::deletion(node* now)
 {
-    bool now_is_red, replace_is_red;
+    bool now_is_red;
     node* replace;
-    
+
     now_is_red = now->is_red;
 
-    if (now->left==NULL && now->right==NULL)
-        delete now;
-    else if (now->left==NULL)
+    if (!now->left->valid && !now->right->valid)
+    {
+        now->is_red = now->left->is_red;
+        now->valid = false;
+    }
+    else if (!now->left->valid)
     {
         replace = now->right;
-        if (now->parent->left == now)
-            now->parent->left = replace;
-        else
-            now->parent->right = replace;
-        replace_is_red = replace->is_red;
-        replace->parent = now->parent;
-        replace->is_red = now->is_red;
-        delete now;
-    }
-    else if (now->right==NULL)
-    {
-        replace = now->left;
-        if (now->parent->left == now)
-            now->parent->left = replace;
-        else
-            now->parent->right = replace;
-        replace_is_red = replace->is_red;
-        replace->parent = now->parent;
-        replace->is_red = now->is_red;
-        delete now;
-    }
-    else
-    {
-        replace = now->left;
-        while(replace->right!=NULL)
-            replace = replace->right;
-        now->value = replace->value;
-
-        deletion(replace);
-    }
-
-    if (!now_is_red && !replace_is_red)
-        fix_tree_del(now);
-    
-    return;
-}
-
-RBtree::~RBtree()
-{
-    node* now = root;
-    if (now != NULL)
-        D_all(now);
-}
-
-void RBtree::insert(int n)
-{
-    bool is_left;
-    node* p = NULL;
-    node* now = root;
-
-    if (this->root == NULL)
-    {
-        root = new node(n,p);
-        root->is_red = false;
-        return;
-    }
-
-    while(now != NULL)
-    {
-        p = now;
-        if (n <= now->value)
+        if (now == now->parent->left)
         {
-            is_left = true;
-            now = now->left;
+            now->parent->left = replace;
+            replace->parent = now->parent;
         }
         else 
         {
-            is_left = false;
-            now = now->right;
+            now->parent->right = replace;
+            replace->parent = now->parent;
         }
+        delete now->left;
+        delete now;
+        now = replace;
     }
-    now = new node(n,p);
-    
-    if (is_left)
-        p->left = now;
-    else
-        p->right = now;
-
-    fix_tree_insert(now);
-
-    return;
-}
-
-void RBtree::del(int n)
-{
-    node* now = this->root;
-
-    while(1)
+    else if (!now->right->valid)
     {
-        if (n == now->value)
-            break;
-        else if (n < now->value)
-            now = now->left;
-        else if (n > now->value)
-            now = now->right;
+        replace = now->left;
+        if (now == now->parent->left)
+        {
+            now->parent->left = replace;
+            replace->parent = now->parent;
+        }
+        else 
+        {
+            now->parent->right = replace;
+            replace->parent = now->parent;
+        }
+        delete now->right;
+        delete now;
+        now = replace;
+    }
+    else 
+    {
+        replace = now->left;
+        while(replace->right->valid)
+            replace = replace->right;
+        now->value = replace->value;
+        now = replace;
+        deletion(now);
     }
 
-    deletion(now);
-    
-    return;
-}
-
-void RBtree::show(node* now, fstream& fout)
-{
-    if (now == NULL)
-        return;
-
-    show(now->left,fout);
-    fout << "key: " << now->value;
-    fout << " parent: ";
-    if (now->parent == NULL)
-        fout << "0";
-    else
-        fout << now->parent->value;
-    fout << " color: ";
-    if (now->is_red)
-        fout << "red" << endl;
-    else
-        fout << "black" << endl;
-    show(now->right,fout);
+    if (!now_is_red)
+        fix_tree_del(now);
 
     return;
 }
 
-node* RBtree::Root()
-{
-    return this->root;
-}
-// end red black tree
+
 
 int main ()
 {
@@ -455,7 +442,7 @@ int main ()
     stringstream ss;
 
     fin.open("input.txt",fstream::in);
-    fout.open("log.txt",fstream::out);
+    fout.open("output.txt",fstream::out);
 
     getline(fin,str);
     ss << str;
@@ -507,6 +494,7 @@ int main ()
         fout << endl;
 
         tree.show(tree.Root(),fout);
+
     }
 
     return 0;
