@@ -337,7 +337,7 @@ void RBtree::fix_tree_del(node* now)
                     now->parent->is_red = false;
                     sibling->right->is_red = false;
                     left_rotate(sibling);
-                    sibling->is_red = false;
+                    root->is_red = false;
                     return;
                 }
                 else
@@ -353,7 +353,7 @@ void RBtree::fix_tree_del(node* now)
                     now->parent->is_red = false;
                     sibling->left->is_red = false;
                     right_rotate(sibling);
-                    sibling->is_red = false;
+                    root->is_red = false;
                     return;
                 }
             }
@@ -417,6 +417,7 @@ void RBtree::deletion(node* now)
         now->value = replace->value;
         now = replace;
         deletion(now);
+        return;
     }
 
     if (!now_is_red)
@@ -438,7 +439,7 @@ int main ()
     stringstream ss;
 
     fin.open("input.txt",fstream::in);
-    fout.open("log.txt",fstream::out);
+    fout.open("output.txt",fstream::out);
 
     getline(fin,str);
     ss << str;
